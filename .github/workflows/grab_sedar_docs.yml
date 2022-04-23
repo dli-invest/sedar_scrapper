@@ -1,0 +1,70 @@
+name: Scan Sedar
+
+on:
+  push:
+    branches:
+      - 'main'
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron: '* 3 * * 1-5'
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Check Messages
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.6' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+
+      - name: Run Script to get us tickers
+        run: |
+          curl https://www.sedar.com/new_docs/all_new_pc_filings_en.htm > tables.html
+          python3 -m pip install -r requirements.txt
+          python3 scan_sedar.py
+
+      - uses: actions/upload-artifact@v2
+        with:
+            name: scrap cse releases
+            path: tables.html
+
+      - name: Commit files
+        run: |
+          if [[ -z $(git status -s) ]]
+          then
+            echo "tree is clean"
+          else
+            git add *.csv *.html || true
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            echo "tree is dirty, please commit changes before running this"
+            echo "PUSH_FILES=true" >> $GITHUB_ENV
+            git commit -m "Add changes" -a
+          fi
+      - name: Test
+        run: echo ${{ env.PUSH_FILES }}
+
+      - name: Push changes
+        if: ${{ env.PUSH_FILES == 'true' }}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+
+      - uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_CODE_STATUS_WEBHOOK }}
+          status: ${{ job.status }}
+          title: ${{github.repository}}
+          description: "Failed to push news"
+          nofail: false
+          nocontext: false
+          noprefix: false
+          color: 0xff0000
+          username: Sedar_scrapper
