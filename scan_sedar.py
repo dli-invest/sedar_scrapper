@@ -58,6 +58,7 @@ def parse_table(df: pd.DataFrame):
     full_df = pd.concat([new_df, legacy_df]).drop_duplicates(keep="first")
     full_df.to_csv(csv_name, index=False)
     # too many entries to send, just keep saving all the sedar docs for now
+    print(merged_df)
     if len(merged_df) > 0:
         url = os.getenv("DISCORD_WEBHOOK")
         df_string = merged_df.to_string(header=True, index=False)
@@ -67,6 +68,10 @@ def parse_table(df: pd.DataFrame):
         for chunk in chunks:
             post_webhook_content(url, {"content": chunk})
             time.sleep(2)
+        else:
+            print("NO CHUNKS")
+            print(df_string)
+            post_webhook_content(url, {"content": df_string})
         pass
 
 def main(url="https://www.sedar.com/new_docs/all_new_pc_filings_en.htm"):
