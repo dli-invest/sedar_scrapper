@@ -6,8 +6,11 @@ on:
       - 'main'
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron: '* 3 * * 1-5'
+    - cron: '* 3 * * 1-6'
 
+
+env:
+  DISCORD_WEBHOOK:  ${{ secrets.DISCORD_DAILY_REVIEW_WEBHOOK }}
 
 jobs:
   build:
