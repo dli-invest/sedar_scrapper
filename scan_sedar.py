@@ -54,7 +54,7 @@ def parse_table(df: pd.DataFrame):
                     "File Size" : row["r6"]})
             new_df = pd.concat([new_df, new_df_row])
     legacy_df = pd.read_csv(csv_name)
-    merged_df = new_df.merge(legacy_df,indicator = True, how='outer').loc[lambda x : x['_merge']=='right_only']
+    merged_df = new_df.merge(legacy_df,indicator = True, on=["Company Name","Date of filing","Time of filing","Document Type","File Format","File Size"], how='left').loc[lambda x : x['_merge']=='left_only']
     full_df = pd.concat([new_df, legacy_df]).drop_duplicates(keep="first")
     full_df.to_csv(csv_name, index=False)
     if len(merged_df) > 0:
