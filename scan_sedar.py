@@ -70,7 +70,6 @@ def parse_table(df: pd.DataFrame):
             print("NO CHUNKS")
             print(df_string)
             post_webhook_content(url, {"content": df_string})
-        pass
 
 def main(url="https://www.sedar.com/new_docs/all_new_pc_filings_en.htm"):
     # parse html from tables.html using pandas
