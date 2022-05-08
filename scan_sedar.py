@@ -54,11 +54,9 @@ def parse_table(df: pd.DataFrame):
                     "File Size" : row["r6"]})
             new_df = pd.concat([new_df, new_df_row])
     legacy_df = pd.read_csv(csv_name)
-    merged_df = new_df.merge(legacy_df,indicator = True, how='left').loc[lambda x : x['_merge']=='right_only']
+    merged_df = new_df.merge(legacy_df,indicator = True, how='outer').loc[lambda x : x['_merge']=='right_only']
     full_df = pd.concat([new_df, legacy_df]).drop_duplicates(keep="first")
     full_df.to_csv(csv_name, index=False)
-    # too many entries to send, just keep saving all the sedar docs for now
-    print(merged_df)
     if len(merged_df) > 0:
         url = os.getenv("DISCORD_WEBHOOK")
         df_string = merged_df.to_string(header=True, index=False)
