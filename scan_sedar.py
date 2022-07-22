@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import json
 import requests
+from io import StringIO
 import time
 
 def post_webhook_content(url, data: dict):
@@ -19,6 +20,20 @@ def post_webhook_content(url, data: dict):
             post_webhook_content(url, data)
     else:
         print("Payload delivered successfully, code {}.".format(result.status_code))
+
+# send csv to discord webhook
+
+def post_buffer_to_discord(url: str, file: str, filename: str = 'file'):
+  url = url
+  result = requests.post(
+      url, files={filename: file}
+  )
+  try:
+      result.raise_for_status()
+  except requests.exceptions.HTTPError as err:
+      print(err)
+  else:
+      print("Image Delivered {}.".format(result.status_code))
 
 def is_unique(s):
     a = s.to_numpy() # s.values (pandas<0.24)
@@ -54,22 +69,20 @@ def parse_table(df: pd.DataFrame):
                     "File Size" : row["r6"]})
             new_df = pd.concat([new_df, new_df_row])
     legacy_df = pd.read_csv(csv_name)
-    merged_df = new_df.merge(legacy_df,indicator = True, on=["Company Name","Date of filing","Time of filing","Document Type","File Format","File Size"], how='left').loc[lambda x : x['_merge']=='left_only']
+    merged_df: pd.DataFrame = new_df.merge(legacy_df,indicator = True, on=["Company Name","Date of filing","Time of filing","Document Type","File Format","File Size"], how='left').loc[lambda x : x['_merge']=='left_only']
     full_df = pd.concat([new_df, legacy_df]).drop_duplicates(keep="first")
     full_df.to_csv(csv_name, index=False)
+    
     if len(merged_df) > 0:
         url = os.getenv("DISCORD_WEBHOOK")
-        df_string = merged_df.to_string(header=True, index=False)
-        # send row results to discord via csv
-        # split into chunks of 2000
-        chunks = [df_string[i:i+1990] for i in range(0, len(df_string), 1990)]
-        for chunk in chunks:
-            post_webhook_content(url, {"content": chunk})
-            time.sleep(2)
-        else:
-            print("NO CHUNKS")
-            print(df_string)
-            post_webhook_content(url, {"content": df_string})
+        # send csv to discord
+        textstream = StringIO()
+        merged_df.to_csv(textstream, encoding='utf-8', index=False)
+        # get current date in YYYY-MM-DD format
+        date = time.strftime("%Y-%m-%d")
+        filename = f"sedar_docs_{date}.csv"
+        post_buffer_to_discord(url, textstream.getvalue(), filename={filename})
+        
 
 def main(url="https://www.sedar.com/new_docs/all_new_pc_filings_en.htm"):
     # parse html from tables.html using pandas
